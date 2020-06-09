@@ -1,7 +1,7 @@
 node_modules
 .bablerc
 webpack.config.js
-package-loc.json
+package-lock.json
 Todo
 scratch
 .vscode

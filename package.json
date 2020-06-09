@@ -4,15 +4,14 @@
   "description": "Indian Stocks Viewer",
   "main": "index.js",
   "scripts": {
-    "dev": "webpack --mode development && node ./dist/js/index.js",
-    "build": "webpack --mode production",
-    "start": "webpack-dev-server --mode development --open"
+    "start": "NODE_PATH=. node ./src/js/index.js",
+    "test": "NODE_PATH=. node ./src/js/test.js"
   },
   "author": "Navneet Surana",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.19.2"
+    "axios": "^0.19.2",
+    "csvtojson": "^2.0.10"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }
