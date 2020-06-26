@@ -5,13 +5,17 @@
   "main": "index.js",
   "scripts": {
     "start": "NODE_PATH=. node ./src/js/index.js",
-    "test": "NODE_PATH=. node ./src/js/test.js"
+    "test": "NODE_PATH=. node ./src/js/test.js",
+    "py": "python3 ./src/py/yahooFinance.py RELIANCE.BO"
   },
   "author": "Navneet Surana",
   "license": "ISC",
   "dependencies": {
+    "async": "^3.2.0",
     "axios": "^0.19.2",
-    "csvtojson": "^2.0.10"
+    "csvtojson": "^2.0.10",
+    "mongodb": "^3.5.8",
+    "yahoo-finance": "^0.3.6"
   },
   "devDependencies": {}
 }

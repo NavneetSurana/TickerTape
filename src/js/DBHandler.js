@@ -29,4 +29,4 @@ class DBHandler {
 		console.log("connection closed");
 	}
 }
-module.exports = new DBHandler();
+module.exports = DBHandler;

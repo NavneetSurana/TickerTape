@@ -27,10 +27,14 @@ module.exports = class Security {
 	}
 	getDetails() {
 		return {
-			id: this.id,
-			name: this.name,
-			isin: this.isin,
-			dol: this.dol,
+			Symbol: this.id,
+			Name: this.name,
+			"ISIN No": this.isin,
+			"Day of Listing": this.dol
+				? new Date(`${this.dol} 00:00:00 UTC`)
+				: undefined,
+			"Listed In NSE": this.nseFlag,
+			"Listed In BSE": this.bseFlag,
 		};
 	}
 };
