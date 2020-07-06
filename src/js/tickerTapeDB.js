@@ -1,9 +1,15 @@
 const client = require("./DBHandler");
 const Info = require("./FetchEquityInfo");
-const FetchEquityInfo = require("./FetchEquityInfo");
-const { EquityMeta } = require("./config");
-const { mapLimit, sortBy } = require("async");
-const { spawnProcess } = require("./utility");
+const conf = require("./config");
+const fspromises = require("fs").promises;
+const {
+	spawnProcess,
+	execProcess,
+	getFmtDate,
+	readFile,
+	writeFile,
+} = require("./utility");
+const { backupPath } = require("./config");
 const Ploop = require("async").eachLimit;
 
 module.exports = {
@@ -14,43 +20,11 @@ module.exports = {
 		const collection = db.collection(colName);
 		const rawData = await collection.find(query).project(projection).toArray();
 		await DBHandler.close();
-		let data = callback ? rawData.map(callback) : rawData;
-		return data;
-	},
-	updateEquityMeta: async () => {
-		await Info.fetchMeta();
-		const DBHandler = new client();
-		await DBHandler.connect();
-		const db = DBHandler.get();
-		const collection = db.collection(EquityMeta);
-		const securities = Array.from(Info.Securities, ([key, val]) =>
-			val.getDetails()
-		);
-		try {
-			await collection.createIndex({ Symbol: 1 }, { unique: true });
-			await Promise.all(
-				securities.map(
-					async (security) =>
-						await collection.updateOne(
-							{ Symbol: security.Symbol },
-							{
-								$setOnInsert: Object.assign(security, {
-									"Last Updated": new Date(),
-								}),
-							},
-							{ upsert: true }
-						)
-				)
-			);
-			console.log(`${EquityMeta} Collection Updated`);
-		} catch (err) {
-			console.log(err);
-		} finally {
-			await DBHandler.close();
-		}
+		//let data = callback ? rawData.map(callback) : rawData;
+		return rawData;
 	},
 	getAllSymbols: async () => {
-		const colName = EquityMeta;
+		const colName = conf.EquityMeta;
 		const query = {};
 		const projection = {
 			Symbol: 1,
@@ -60,7 +34,7 @@ module.exports = {
 		};
 		const rawSecData = await module.exports.get(colName, query, projection);
 		let Symbols = [];
-		await rawSecData.map((sec) => {
+		rawSecData.map((sec) => {
 			const nseFlag = sec["Listed In NSE"];
 			const bseFlag = sec["Listed In BSE"];
 			const Symbol = sec["Symbol"];
@@ -70,92 +44,139 @@ module.exports = {
 		});
 		return Symbols;
 	},
-	newHistoryCollection: async () => {
-		const colName = EquityMeta;
-		const query = {};
-		const projection = {
-			Symbol: 1,
-			"Listed In NSE": 1,
-			"Listed In BSE": 1,
-			_id: 0,
-		};
-		const rawSecData = await module.exports.get(colName, query, projection);
-		let tickers = ["./src/py/yahooFinance.py"];
-		await rawSecData.map((sec) => {
-			const nseFlag = sec["Listed In NSE"];
-			const bseFlag = sec["Listed In BSE"];
-			const Symbol = sec["Symbol"];
-			let tic = [];
-			if (nseFlag) tickers.push(`${Symbol}.NS`);
-			if (bseFlag) tickers.push(`${Symbol}.BO`);
-		});
-		console.log(tickers);
-		await require("fs").appendFile("./errorlogs.json", tickers, (err) => {
-			if (err) console.log("Error writing file:", err);
-		});
-		// console.log(tickers);
-		// mapLimit(rawSecData, 1, async (sec) => {
-		// 	const nseFlag = sec["Listed In NSE"];
-		// 	const bseFlag = sec["Listed In BSE"];
-		// 	const Symbol = sec["Symbol"];
-		// 	await require("fs").appendFile(
-		// 		"./errorlogs.json",
-		// 		`${Symbol} Started\n`,
-		// 		(err) => {
-		// 			if (err) console.log("Error writing file:", err);
-		// 		}
-		// 	);
-		// 	if (nseFlag) {
-		// 		// let data = await FetchEquityInfo.fetchHistory(Symbol, "NSE");
-		// 		// let collection = db.collection(`${Symbol}.NSE`);
-		// 		// await collection.createIndex({ Date: 1 }, { unique: true });
-		// 		// await collection.insertMany(data, { ordered: false });
-		// 		await spawn("python3", ["./src/py/yahooFinance.py", `${Symbol}.NS`]);
-		// 	}
-		// 	if (bseFlag) {
-		// 		// data = await FetchEquityInfo.fetchHistory(Symbol, "BSE");
-		// 		// collection = db.collection(`${Symbol}.BSE`);
-		// 		// await collection.createIndex({ Date: 1 }, { unique: true });
-		// 		// await collection.insertMany(data, { ordered: false });
-		// 		await spawn("python3", ["./src/py/yahooFinance.py", `${Symbol}.BO`]);
-		// 	}
-		// 	await require("fs").appendFile(
-		// 		"./errorlogs.json",
-		// 		`${Symbol} Done\n`,
-		// 		(err) => {
-		// 			if (err) console.log("Error writing file:", err);
-		// 		}
-		// 	);
-		// });
-	},
-	updateHistory: async (Symbol) => {
-		const cmd = "python3";
-		const comOptions = "./src/py/updateHistory.py";
-		const params = [Symbol];
-		const options = { stdio: ["ignore", "ignore", "pipe"] };
-		//const options = undefined;
-		const code = await spawnProcess(cmd, [comOptions, ...params], options);
-		if (code) console.log(`Done ${Symbol} code ${code}`);
-	},
-	updateHistoryALL: async () => {
-		let Symbols = await module.exports.getAllSymbols();
-		Symbols = Symbols.slice(0, 100);
-		await Ploop(Symbols, 10, async (Symbol) => {
-			await module.exports.updateHistory(Symbol);
-		});
-	},
-	update: async (colName, data, index, callback) => {
+	insertEquityMeta: async (test = 0) => {
+		await Info.fetchMeta(test);
+		const DBHandler = new client();
 		await DBHandler.connect();
 		const db = DBHandler.get();
-		const collection = db.collection(colName);
+		const collection = db.collection(conf.EquityMeta);
+		const securities = Array.from(Info.Securities, ([key, val]) =>
+			val.getDetails()
+		);
 		try {
-			await collection.createIndex(...index);
-			await Promise.all(data.map(callback));
-			console.log(`${colName} Collection Updated`);
+			await collection.createIndex({ Symbol: 1 }, { unique: true });
+			await Ploop(securities, 10, async (security) => {
+				const res = await collection.updateOne(
+					{ Symbol: security.Symbol },
+					{
+						$setOnInsert: Object.assign(security, {
+							"Last Updated": new Date(),
+						}),
+					},
+					{ upsert: true }
+				);
+			});
 		} catch (err) {
 			console.log(err);
 		} finally {
 			await DBHandler.close();
 		}
+	},
+	updateEquityFlagInfo: async () => {
+		const DBHandler = new client();
+		await DBHandler.connect();
+		const db = DBHandler.get();
+		const collection = db.collection(conf.EquityMeta);
+		const currCollectionList = (await db.listCollections().toArray()).map(
+			(val) => val.name
+		);
+		const symbolMap = new Map();
+		const tickers = (
+			await collection.find({}).project({ _id: 0, Symbol: 1 }).toArray()
+		).map((val) => val.Symbol);
+		tickers.forEach((symbol) => symbolMap.set(symbol, { BSE: 0, NSE: 0 }));
+		currCollectionList.forEach((val) => {
+			if (val != conf.EquityMeta) {
+				const symbol = val.slice(0, val.length - 4);
+				const ext = val.slice(symbol.length + 1, val.length);
+				symbolMap.get(symbol)[ext] = 1;
+			}
+		});
+		await Ploop(tickers, 10, async (symbol) => {
+			await collection.updateOne(
+				{ Symbol: symbol },
+				{
+					$set: {
+						"Listed In NSE": symbolMap.get(symbol)["NSE"],
+						"Listed In BSE": symbolMap.get(symbol)["BSE"],
+						"Last Updated": new Date(),
+					},
+				},
+				{ upsert: true }
+			);
+		});
+		await DBHandler.close();
+	},
+	updateHistory: async (Symbol) => {
+		const cmd = "python3";
+		const comOptions = "./src/py/updateHistory.py";
+		const params = [Symbol];
+		const options = { stdio: ["ignore", "pipe", "pipe"] };
+		const code = await spawnProcess(cmd, [comOptions, ...params], options);
+		if (code) console.log(`Done ${Symbol} code ${code}`);
+	},
+	updateHistoryALL: async () => {
+		let Symbols = await module.exports.getAllSymbols();
+		await Ploop(Symbols, 10, async (Symbol) => {
+			await module.exports.updateHistory(Symbol);
+		});
+	},
+
+	createBackup: async () => {
+		const res = await execProcess(`ls ${backupPath}`);
+		let curBackups = [];
+		if (res != "") curBackups = res.trim().split("\n");
+		const date = getFmtDate();
+		const dirName = `TT-${date}`;
+		if (curBackups.length > 0 && curBackups[curBackups.length - 1] == dirName) {
+			return 0;
+		} else {
+			await fspromises.mkdir(`${conf.backupPath}/${dirName}`, {
+				recursive: true,
+			});
+			const args = [
+				"--db",
+				`${conf.dbName}`,
+				"--username",
+				`${conf.user}`,
+				"--password",
+				`${conf.pass}`,
+				"--authenticationDatabase",
+				`${conf.authDb}`,
+				"--out",
+				`${conf.backupPath}/${dirName}`,
+				"2>",
+				`${conf.backupPath}/${dirName}/logs.txt`,
+			];
+			cmd = "mongodump";
+			const options = { stdio: ["ignore", "pipe", "pipe"], shell: true };
+			const code = await spawnProcess(cmd, args, options);
+			if (code == 0) {
+				await Ploop(curBackups, 10, async (file) => {
+					await execProcess(`rm -rf ${backupPath}/${file}`);
+				});
+			} else {
+				await execProcess(`rm -rf ${backupPath}/${dirName}`);
+			}
+			return code;
+		}
+	},
+	fetchHistory: async (Symbol) => {
+		const cmd = "python3";
+		const comOptions = "./src/py/fetchHistory.py";
+		const params = [Symbol];
+		const options = { stdio: ["ignore", "pipe", "pipe"] };
+		const code = await spawnProcess(cmd, [comOptions, ...params], options);
+		if (code) console.log(`Done ${Symbol} code ${code}`);
+	},
+	fetchHistoryALL: async () => {
+		let Symbols = await module.exports.getAllSymbols();
+		await Ploop(Symbols, 10, async (Symbol) => {
+			await module.exports.fetchHistory(Symbol);
+		});
+	},
+	createTestDB: async () => {
+		await module.exports.insertEquityMeta(1);
+		await module.exports.fetchHistoryALL();
 	},
 };

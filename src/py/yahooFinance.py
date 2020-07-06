@@ -2,7 +2,7 @@ import sys
 import pymongo
 from pandas_datareader import data as pdr
 import datetime
-
+import config as conf
 import yfinance as yf
 yf.pdr_override()
 
@@ -24,20 +24,21 @@ def getColName(Symbol):
 
 
 def fetchHistory(Symbol):
-    f = open("logs", "w")
+    f = open("logs", "a")
     f.write(Symbol+' Open =================>\n')
     try:
-        myclient = pymongo.MongoClient(
-            "mongodb://admin:password@localhost:27017/")
+        myclient = pymongo.MongoClient(conf.url)
         data = pdr.get_data_yahoo(
             Symbol, period="max")
         data.reset_index(level=0, inplace=True)
         finalData = data.to_dict(orient="records")
-        mydb = myclient["tickerTape"]
+        mydb = myclient[conf.dbName]
         collection = getColName(Symbol)
         mycol = mydb[collection]
         mycol.create_index([("Date", pymongo.DESCENDING)], unique=True)
         mycol.insert_many(finalData, ordered=False)
+    except pymongo.errors.BulkWriteError:
+        pass
     except Exception as e:
         f.write(str(e))
     finally:
@@ -51,9 +52,8 @@ def createIndex(Symbol):
     f.write(Symbol+' Open =================>\n')
 
     try:
-        myclient = pymongo.MongoClient(
-            "mongodb://admin:password@localhost:27017/")
-        mydb = myclient["tickerTape"]
+        myclient = pymongo.MongoClient(conf.url)
+        mydb = myclient[conf.dbName]
         collection = getColName(Symbol)
         mycol = mydb[collection]
         mycol.create_index([("Date", -1)], unique=True)
@@ -69,9 +69,8 @@ def createIndex(Symbol):
 def updateHistory(Symbol):
     f = open("logs", "a")
     try:
-        myclient = pymongo.MongoClient(
-            "mongodb://admin:password@localhost:27017/")
-        mydb = myclient["tickerTape"]
+        myclient = pymongo.MongoClient(conf.url)
+        mydb = myclient[conf.dbName]
         collection = getColName(Symbol)
         mycol = mydb[collection]
         start = mycol.find().sort([("Date", -1)]).limit(1)[0]["Date"]

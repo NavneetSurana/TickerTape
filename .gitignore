@@ -14,3 +14,4 @@ src/js/test.js
 err
 logs
 out.txt
+.env
