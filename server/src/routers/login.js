@@ -25,7 +25,7 @@ router.post("/", async (req, res) => {
 		if (!match) {
 			throw { userData, code };
 		} else {
-			const token = await jwt.sign(user, key, { algorithm: "RS256" });
+			const token = await jwt.sign(query, key, { algorithm: "RS256" });
 			status = 200;
 			resData = { token };
 		}

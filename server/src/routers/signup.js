@@ -8,13 +8,17 @@ router.post("/", async (req, res) => {
 	let status;
 	let resData;
 	const user = req.user;
+	let query = {};
+	if (user._id) query._id = user._id;
+	if (user.email) query.email = user.email;
+	if (user.phone) query.phone = user.phone;
 	try {
 		const key = await readFile(require.resolve("../../secret/tt_rsa"));
 		const { code } = await userDB.create(user);
 		if (code !== 0) {
 			throw { code };
 		} else {
-			const token = await jwt.sign(user, key, { algorithm: "RS256" });
+			const token = await jwt.sign(query, key, { algorithm: "RS256" });
 			status = 200;
 			resData = { token };
 		}
@@ -22,10 +26,6 @@ router.post("/", async (req, res) => {
 		console.error(err);
 		status = 400;
 		resData = { message: "something went wrong try again" };
-		let query = {};
-		if (user._id) query._id = user._id;
-		if (user.email) query.email = user.email;
-		if (user.phone) query.phone = user.phone;
 		await userDB.delete(query);
 	} finally {
 		return res.status(status).json(resData);
