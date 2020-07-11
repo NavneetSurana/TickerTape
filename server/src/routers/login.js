@@ -10,10 +10,13 @@ router.post("/", async (req, res) => {
 	try {
 		const key = await readFile(require.resolve("../../secret/tt_rsa"));
 		const user = req.user;
-		const { data: userData, code } = await userDB.read(user._id);
+		let query = {};
+		if (user._id) query._id = user._id;
+		if (user.email) query.email = user.email;
+		if (user.phone) query.phone = user.phone;
+		const { data: userData, code } = await userDB.read(query);
 		let match = true;
-
-		if (code == 1 || userData == null) {
+		if (code !== 0 || !userData) {
 			match = false;
 		}
 		if (match) {
@@ -31,7 +34,7 @@ router.post("/", async (req, res) => {
 		status = 400;
 		resData = { message: "username or password invalid" };
 	} finally {
-		res.status(status).json(resData);
+		return res.status(status).json(resData);
 	}
 });
 

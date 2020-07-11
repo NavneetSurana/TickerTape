@@ -2,11 +2,27 @@ const client = require("./DBHandler");
 const conf = require("../js/config");
 
 module.exports = {
-	
+	createCollections: async () => {
+		const DBHandler = new client();
+		try {
+			await DBHandler.connect(conf.userDB);
+			const db = DBHandler.get();
+			const collection = db.collection("userInfo");
+			await collection.createIndexes([
+				{ key: { phone: 1 } },
+				{ key: { email: 1 }, unique: true },
+			]);
+		} catch (err) {
+			console.error(err);
+		} finally {
+			await DBHandler.close();
+		}
+	},
 	create: async (user) => {
 		let res = {};
 		const DBHandler = new client();
 		try {
+			if (Object.keys(user).length === 0) throw "empty query";
 			await DBHandler.connect(conf.userDB);
 			const db = DBHandler.get();
 			const collection = db.collection("userInfo");
@@ -24,6 +40,7 @@ module.exports = {
 		let res = {};
 		const DBHandler = new client();
 		try {
+			if (Object.keys(user).length === 0) throw "empty query";
 			await DBHandler.connect(conf.userDB);
 			const db = DBHandler.get();
 			const collection = db.collection("userInfo");
@@ -45,14 +62,15 @@ module.exports = {
 			return res;
 		}
 	},
-	read: async (username) => {
+	read: async (query) => {
 		let res = {};
 		const DBHandler = new client();
 		try {
+			if (Object.keys(query).length === 0) throw "empty query";
 			await DBHandler.connect(conf.userDB);
 			const db = DBHandler.get();
 			const collection = db.collection("userInfo");
-			res.data = await collection.findOne({ _id: username });
+			res.data = await collection.findOne(query);
 			res.code = 0;
 		} catch (err) {
 			console.error(err);
@@ -62,14 +80,15 @@ module.exports = {
 			return res;
 		}
 	},
-	delete: async (username) => {
+	delete: async (query) => {
 		let res = {};
 		const DBHandler = new client();
 		try {
+			if (Object.keys(query).length === 0) throw "empty query";
 			await DBHandler.connect(conf.userDB);
 			const db = DBHandler.get();
 			const collection = db.collection("userInfo");
-			await collection.deleteOne({ _id: username });
+			await collection.deleteOne(query);
 			res.code = 0;
 		} catch (err) {
 			console.error(err);

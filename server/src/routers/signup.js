@@ -11,7 +11,7 @@ router.post("/", async (req, res) => {
 	try {
 		const key = await readFile(require.resolve("../../secret/tt_rsa"));
 		const { code } = await userDB.create(user);
-		if (code == 1) {
+		if (code !== 0) {
 			throw { code };
 		} else {
 			const token = await jwt.sign(user, key, { algorithm: "RS256" });
@@ -22,9 +22,13 @@ router.post("/", async (req, res) => {
 		console.error(err);
 		status = 400;
 		resData = { message: "something went wrong try again" };
-		await userDB.delete(user._id);
+		let query = {};
+		if (user._id) query._id = user._id;
+		if (user.email) query.email = user.email;
+		if (user.phone) query.phone = user.phone;
+		await userDB.delete(query);
 	} finally {
-		res.status(status).json(resData);
+		return res.status(status).json(resData);
 	}
 });
 
