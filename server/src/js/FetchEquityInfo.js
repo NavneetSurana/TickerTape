@@ -1,7 +1,5 @@
-const Security = require("./Security.js");
+const Security = require("./Security");
 const csv = require("csvtojson");
-const tickerTapeDB = require("./tickerTapeDB");
-const { getData } = require("./utility");
 class FetchEquityInfo {
 	constructor(
 		BSEurl = `https://www.bseindia.com/corporates/List_Scrips.aspx`,

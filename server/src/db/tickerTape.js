@@ -1,6 +1,6 @@
-const client = require("./DBHandler");
-const Info = require("./FetchEquityInfo");
-const conf = require("./config");
+const client = require("../js/DBHandler");
+const Info = require("../js/FetchEquityInfo");
+const conf = require("../js/config");
 const fspromises = require("fs").promises;
 const {
 	spawnProcess,
@@ -8,14 +8,14 @@ const {
 	getFmtDate,
 	readFile,
 	writeFile,
-} = require("./utility");
-const { backupPath } = require("./config");
+} = require("../js/utility");
+const { backupPath } = require("../js/config");
 const Ploop = require("async").eachLimit;
 
 module.exports = {
 	get: async (colName, query, projection, callback = undefined) => {
 		const DBHandler = new client();
-		await DBHandler.connect();
+		await DBHandler.connect(conf.tickerTapeDB);
 		const db = DBHandler.get();
 		const collection = db.collection(colName);
 		const rawData = await collection.find(query).project(projection).toArray();
@@ -24,7 +24,7 @@ module.exports = {
 		return rawData;
 	},
 	getAllSymbols: async () => {
-		const colName = conf.EquityMeta;
+		const colName = "EquityMeta";
 		const query = {};
 		const projection = {
 			Symbol: 1,
@@ -47,9 +47,9 @@ module.exports = {
 	insertEquityMeta: async (test = 0) => {
 		await Info.fetchMeta(test);
 		const DBHandler = new client();
-		await DBHandler.connect();
+		await DBHandler.connect(conf.tickerTapeDB);
 		const db = DBHandler.get();
-		const collection = db.collection(conf.EquityMeta);
+		const collection = db.collection("EquityMeta");
 		const securities = Array.from(Info.Securities, ([key, val]) =>
 			val.getDetails()
 		);
@@ -74,9 +74,9 @@ module.exports = {
 	},
 	updateEquityFlagInfo: async () => {
 		const DBHandler = new client();
-		await DBHandler.connect();
+		await DBHandler.connect(conf.tickerTapeDB);
 		const db = DBHandler.get();
-		const collection = db.collection(conf.EquityMeta);
+		const collection = db.collection("EquityMeta");
 		const currCollectionList = (await db.listCollections().toArray()).map(
 			(val) => val.name
 		);
@@ -86,7 +86,7 @@ module.exports = {
 		).map((val) => val.Symbol);
 		tickers.forEach((symbol) => symbolMap.set(symbol, { BSE: 0, NSE: 0 }));
 		currCollectionList.forEach((val) => {
-			if (val != conf.EquityMeta) {
+			if (val != "EquityMeta") {
 				const symbol = val.slice(0, val.length - 4);
 				const ext = val.slice(symbol.length + 1, val.length);
 				symbolMap.get(symbol)[ext] = 1;

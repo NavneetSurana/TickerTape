@@ -1,23 +1,27 @@
 {
-  "name": "tickertape",
-  "version": "1.0.0",
-  "description": "Indian Stocks Viewer",
-  "main": "index.js",
-  "scripts": {
-    "start": "NODE_PATH=. node ./src/js/index.js",
-    "test": "NODE_PATH=. node ./src/js/test.js",
-    "py": "python3 ./src/py/yahooFinance.py RELIANCE.BO"
-  },
-  "author": "Navneet Surana",
-  "license": "ISC",
-  "dependencies": {
-    "async": "^3.2.0",
-    "axios": "^0.19.2",
-    "csvtojson": "^2.0.10",
-    "dotenv": "^8.2.0",
-    "express": "^4.17.1",
-    "mongodb": "^3.5.8",
-    "yahoo-finance": "^0.3.6"
-  },
-  "devDependencies": {}
+	"name": "tickertape",
+	"version": "1.0.0",
+	"description": "Indian Stocks Viewer",
+	"main": "./src/server.js",
+	"scripts": {
+		"prod": "NODE_PATH=. node ./src/server.js",
+		"dev": "NODE_PATH=. nodemon ./src/server.js",
+		"test": "NODE_PATH=. node ./src/js/test.js"
+	},
+	"author": "Navneet Surana",
+	"license": "ISC",
+	"dependencies": {
+		"async": "^3.2.0",
+		"axios": "^0.19.2",
+		"bcrypt": "^5.0.0",
+		"csvtojson": "^2.0.10",
+		"dotenv": "^8.2.0",
+		"express": "^4.17.1",
+		"jsonwebtoken": "^8.5.1",
+		"mongodb": "^3.5.8",
+		"yahoo-finance": "^0.3.6"
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.4"
+	}
 }

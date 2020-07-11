@@ -6,21 +6,13 @@ const bcrypt = require("bcrypt");
 const router = express.Router();
 router.post("/", async (req, res) => {
 	let status;
-	let resData = {};
+	let resData;
+	const user = req.user;
 	try {
 		const key = await readFile(require.resolve("../../secret/tt_rsa"));
-		const user = req.user;
-		const { data: userData, code } = await userDB.read(user._id);
-		let match = true;
-
-		if (code == 1 || userData == null) {
-			match = false;
-		}
-		if (match) {
-			match = await bcrypt.compare(req.body.password, userData.passHash);
-		}
-		if (!match) {
-			throw { userData, code };
+		const { code } = await userDB.create(user);
+		if (code == 1) {
+			throw { code };
 		} else {
 			const token = await jwt.sign(user, key, { algorithm: "RS256" });
 			status = 200;
@@ -29,7 +21,8 @@ router.post("/", async (req, res) => {
 	} catch (err) {
 		console.error(err);
 		status = 400;
-		resData = { message: "username or password invalid" };
+		resData = { message: "something went wrong try again" };
+		await userDB.delete(user._id);
 	} finally {
 		res.status(status).json(resData);
 	}

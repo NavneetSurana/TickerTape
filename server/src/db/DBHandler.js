@@ -1,5 +1,5 @@
 const MongoClient = require("mongodb").MongoClient;
-const conf = require("./config");
+const conf = require("src/js/config");
 class DBHandler {
 	constructor() {
 		this.client = new MongoClient(conf.url, {
@@ -7,13 +7,13 @@ class DBHandler {
 			useUnifiedTopology: true,
 		});
 	}
-	connect = async () => {
+	connect = async (dbName) => {
 		try {
 			if (this.client.isConnected()) console.log("already connected");
 			else {
 				await this.client.connect();
 				console.log("connection established");
-				this.db = this.client.db(conf.dbName);
+				this.db = this.client.db(dbName);
 			}
 		} catch (err) {
 			console.log(err);
