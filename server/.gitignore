@@ -16,3 +16,4 @@ out.txt
 .env
 src/js/test.js
 secret
+src/routers/test.js
