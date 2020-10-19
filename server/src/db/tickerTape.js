@@ -1,4 +1,4 @@
-const client = require("../js/DBHandler");
+const client = require("../db/DBHandler");
 const Info = require("../js/FetchEquityInfo");
 const conf = require("../js/config");
 const fspromises = require("fs").promises;
@@ -117,8 +117,11 @@ module.exports = {
 	},
 	updateHistoryALL: async () => {
 		let Symbols = await module.exports.getAllSymbols();
+		let tot=0;
 		await Ploop(Symbols, 10, async (Symbol) => {
 			await module.exports.updateHistory(Symbol);
+			tot+=1;
+			console.log(`tot = ${tot}`);
 		});
 	},
 
